@@ -12746,7 +12746,7 @@ function printReservationWeek() {
     const key = toLocalDateKey(dayStart);
     const dow = dayStart.getDay();
     const cfg = normalizeDayConfig(reservationDayConfig[key], dow);
-    return { dayStart, key, dow, cfg, colCount: cfg.closed ? 1 : (cfg.count || 3) };
+    return { dayStart, key, dow, cfg, colCount: cfg.closed ? 1 : (cfg.count || 4) };
   });
 
   // 表示中の全ての日で共通して使う時間の範囲(一番早い開始〜一番遅い終了)をまとめる
@@ -12865,7 +12865,7 @@ document.getElementById('reservationDayPrintPickGoBtn').addEventListener('click'
         <div style="font-size:16px;font-weight:700;color:var(--danger);">この日は休診日です</div>
       `;
     } else {
-      const colCount = cfg.count || 3;
+      const colCount = cfg.count || 4;
       const assignedEntries = assignReservationUnits(entries, colCount);
       const rowsHtml = [];
       for (let h = cfg.startHour; h < cfg.endHour; h += 0.5) {
@@ -13523,7 +13523,7 @@ async function loadWeekdayDefaults() {
 function getDefaultDayConfig(dow) {
   const closed = (dow !== undefined && dow !== null && weekdayClosedDefaults[dow]) ? true : false;
   const staff = (dow !== undefined && dow !== null && Array.isArray(weekdayStaffDefaults[dow])) ? weekdayStaffDefaults[dow] : [];
-  return { count: 3, names: [...columnDefaultNames], categories: columnDefaultCategories.map(c => [...c]), closed, startHour: 9, endHour: 18, lunchStart: 12, lunchEnd: 14, confirmed: false, staff, note: '' };
+  return { count: 4, names: [...columnDefaultNames], categories: columnDefaultCategories.map(c => [...c]), closed, startHour: 9, endHour: 18, lunchStart: 12, lunchEnd: 14, confirmed: false, staff, note: '' };
 }
 
 function normalizeDayConfig(raw, dow) {
@@ -16151,7 +16151,7 @@ async function loadReservationWeek() {
           .filter(({data:p}) => p.appointmentHour !== undefined && p.appointmentHour !== null && p.status !== 'キャンセル')
           .map(({id, data:p}) => ({ id, name: p.name || '', chartNumber: p.chartNumber || null, hour: p.appointmentHour, unit: p.unit || null, type: p.reservationType || null, category: p.nextApptCategory || null }));
         const blocked = (availDoc.exists && availDoc.data().blocked) ? availDoc.data().blocked : {};
-        const dayColCount = (reservationDayConfig[dateKey] && reservationDayConfig[dateKey].count) || 3;
+        const dayColCount = (reservationDayConfig[dateKey] && reservationDayConfig[dateKey].count) || 4;
         dayResults.push({ dayStart, entries: assignReservationUnits(entries, dayColCount), blocked });
       } else {
         dayResults.push({ dayStart, entries: [], blocked: {} });
