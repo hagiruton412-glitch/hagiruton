@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ご予約 | 萩原歯科</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
+<style>
+  :root{
+    --navy:#0f2942;
+    --navy-2:#16385a;
+    --teal:#0d7377;
+    --cyan:#14b8c4;
+    --cyan-light:#e6fbfc;
+    --bg:#f4f7f9;
+    --card:#ffffff;
+    --text:#1c2b36;
+    --sub:#5a7182;
+    --border:#e1e8ec;
+    --danger:#d64545;
+    --ok:#1f9d63;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN",Meiryo,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    -webkit-tap-highlight-color:transparent;
+  }
+  header{
+    background:linear-gradient(135deg,var(--navy) 0%,var(--navy-2) 100%);
+    color:#fff;
+    padding:20px 24px;
+    text-align:center;
+  }
+  header h1{margin:0;font-size:19px;font-weight:700;}
+  header p{margin:4px 0 0;font-size:12px;opacity:.85;}
+
+  #app{
+    max-width:640px;
+    margin:0 auto;
+    padding:24px 18px 60px;
+  }
+  .card{
+    background:var(--card);
+    border-radius:16px;
+    padding:24px 20px;
+    box-shadow:0 2px 12px rgba(15,41,66,.06);
+    margin-bottom:20px;
+  }
+  .section-title{
+    font-size:15px;
+    font-weight:700;
+    color:var(--teal);
+    margin:0 0 16px;
+  }
+  label{
+    display:block;
+    font-size:13px;
+    font-weight:700;
+    color:var(--sub);
+    margin:14px 0 6px;
+  }
+  label.first{margin-top:0;}
+  input[type=text], input[type=tel]{
+    width:100%;
+    padding:14px;
+    border:1.5px solid var(--border);
+    border-radius:10px;
+    font-size:16px;
+    font-family:inherit;
+    background:#fbfcfd;
+  }
+  input:focus{outline:none;border-color:var(--cyan);background:#fff;}
+  button{
+    font-family:inherit;
+    cursor:pointer;
+  }
+  .btn-primary{
+    width:100%;
+    margin-top:20px;
+    background:var(--teal);
+    color:#fff;
+    border:none;
+    padding:16px;
+    border-radius:12px;
+    font-size:16px;
+    font-weight:700;
+  }
+  .btn-primary:disabled{background:#b8c4cc;}
+  .error-banner{
+    background:#fdecec;
+    border:1px solid #f3c2c2;
+    color:var(--danger);
+    padding:12px 16px;
+    border-radius:10px;
+    font-size:13px;
+    margin-top:14px;
+    display:none;
+  }
+
+  /* 週ナビ */
+  .week-nav{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:16px;
+  }
+  .week-nav button{
+    background:var(--bg);
+    border:1px solid var(--border);
+    color:var(--text);
+    padding:9px 14px;
+    border-radius:20px;
+    font-size:13px;
+    font-weight:700;
+  }
+  .week-nav span{flex:1;text-align:center;font-size:13px;font-weight:700;color:var(--navy);}
+
+  /* 日ごとのカード形式(スマホで見やすいよう縦積み) */
+  .day-block{margin-bottom:18px;}
+  .day-block-head{
+    font-size:14px;
+    font-weight:700;
+    color:#fff;
+    background:var(--navy);
+    padding:8px 14px;
+    border-radius:10px 10px 0 0;
+  }
+  .day-block-head.today{background:var(--teal);}
+  .day-block-body{
+    border:1px solid var(--border);
+    border-top:none;
+    border-radius:0 0 10px 10px;
+    padding:10px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  .slot-pill{
+    padding:10px 14px;
+    border-radius:10px;
+    font-size:13px;
+    font-weight:700;
+    border:1.5px solid var(--border);
+    background:#fbfcfd;
+    color:var(--text);
+    cursor:pointer;
+    min-width:80px;
+    text-align:center;
+  }
+  .slot-pill.taken{
+    background:#f0f0f0;
+    color:#b7c0c8;
+    border-color:#e8ecef;
+    cursor:not-allowed;
+  }
+  .slot-pill.selected{
+    background:var(--teal);
+    border-color:var(--teal);
+    color:#fff;
+  }
+  .slot-pill .unit-name{display:block;font-size:10px;font-weight:400;margin-top:2px;}
+  .day-closed{
+    padding:14px;
+    text-align:center;
+    color:var(--sub);
+    font-size:13px;
+    border:1px solid var(--border);
+    border-top:none;
+    border-radius:0 0 10px 10px;
+  }
+
+  #selectedSummary{
+    background:var(--cyan-light);
+    border-radius:10px;
+    padding:14px;
+    font-size:14px;
+    font-weight:700;
+    color:var(--teal);
+    display:none;
+    margin-bottom:16px;
+  }
+
+  #screen-done{
+    display:none;
+    text-align:center;
+    padding:60px 20px;
+  }
+  #screen-done .icon{
+    width:76px;height:76px;
+    border-radius:50%;
+    background:var(--ok);
+    color:#fff;
+    font-size:38px;
+    display:flex;align-items:center;justify-content:center;
+    margin:0 auto 20px;
+  }
+  #screen-done h2{font-size:20px;margin:0 0 8px;}
+  #screen-done p{color:var(--sub);font-size:14px;line-height:1.7;}
+
+  .config-banner{
+    background:#fff8e1;
+    border:1px solid #f0d98c;
+    color:#7a5c00;
+    padding:14px 16px;
+    border-radius:10px;
+    font-size:13px;
+    margin:0 auto 20px;
+    max-width:640px;
+  }
+  .loading-note{
+    text-align:center;
+    color:var(--sub);
+    font-size:13px;
+    padding:30px;
+  }
+
+  /* 通院中/初めての方 選択画面 */
+  .entry-choice-row{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    margin-top:6px;
+  }
+  .entry-choice-btn{
+    width:100%;
+    background:#fbfcfd;
+    border:1.5px solid var(--border);
+    color:var(--text);
+    padding:18px;
+    border-radius:12px;
+    font-size:15px;
+    font-weight:700;
+    text-align:left;
+  }
+  .entry-choice-btn .sub{
+    display:block;
+    font-size:12px;
+    font-weight:400;
+    color:var(--sub);
+    margin-top:4px;
+  }
+  .entry-choice-btn.primary{
+    border-color:var(--teal);
+    background:var(--cyan-light);
+    color:var(--teal);
+  }
+  .back-link{
+    display:inline-block;
+    margin-top:14px;
+    font-size:13px;
+    color:var(--sub);
+    text-decoration:underline;
+    background:none;
+    border:none;
+    padding:0;
+  }
+
+  /* 内容確認画面 */
+  .confirm-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:14px 4px;
+    border-bottom:1px solid var(--border);
+  }
+  .confirm-label{
+    font-size:13px;
+    font-weight:700;
+    color:var(--sub);
+  }
+  .confirm-value{
+    font-size:16px;
+    font-weight:700;
+    color:var(--text);
+  }
+  .confirm-notice{
+    background:#fff8e1;
+    border:1px solid #f0d98c;
+    color:#7a5c00;
+    padding:14px 16px;
+    border-radius:10px;
+    font-size:13px;
+    line-height:1.7;
+    margin-top:18px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>萩原歯科 ご予約フォーム</h1>
+  <p id="headerSubtitle">既存患者さまのみご利用いただけます</p>
+</header>
+
+<div id="app">
+
+  <div class="config-banner" id="configBanner" style="display:none;">
+    ⚠ システム設定が未完了です。お手数ですが、お電話でご予約ください。
+  </div>
+
+  <div class="card" id="screen-paused" style="display:none;text-align:center;">
+    <p class="section-title" style="text-align:center;">🌐 ただいまネット予約は停止中です</p>
+    <p style="color:var(--sub);font-size:14px;line-height:1.8;">
+      大変申し訳ございませんが、只今ネット予約の受付を一時的に停止しております。<br>
+      お手数ですがお電話にてご予約ください。
+    </p>
+  </div>
+
+  <!-- STEP0: 通院中/初めての方 選択(NEW_PATIENT_BOOKING_ENABLEDがtrueの時だけ表示) -->
+  <div class="card" id="screen-entry" style="display:none;">
+    <p class="section-title">ご来院について</p>
+    <div class="entry-choice-row">
+      <button class="entry-choice-btn primary" id="entryExistingBtn">
+        通院中の方
+        <span class="sub">カルテ番号をお持ちの方はこちら</span>
+      </button>
+      <button class="entry-choice-btn" id="entryNewBtn">
+        初めての方
+        <span class="sub">当院へのご来院が初めての方はこちら</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- STEP1: 本人確認(既存患者) -->
+  <div class="card" id="screen-verify" style="display:none;">
+    <p class="section-title">① 本人確認</p>
+    <label class="first">カルテ番号</label>
+    <input type="text" id="chartNumberInput" inputmode="numeric" placeholder="診察券に記載の番号">
+    <label>お電話番号（登録されているもの）</label>
+    <input type="tel" id="phoneInput" placeholder="09012345678">
+    <div class="error-banner" id="verifyError"></div>
+    <button class="btn-primary" id="verifyBtn">確認して予約に進む</button>
+    <button class="back-link" id="backToEntryFromVerifyBtn" style="display:none;">← 戻る</button>
+  </div>
+
+  <!-- STEP1-C: 既に今後の予約が入っている場合の案内 -->
+  <div class="card" id="screen-already-booked" style="display:none;text-align:center;">
+    <p class="section-title" style="text-align:center;">既にご予約が入っています</p>
+    <p style="color:var(--sub);font-size:14px;line-height:1.8;">
+      <strong id="alreadyBookedDetail"></strong> にご予約をいただいております。<br><br>
+      ネット予約は、現在のご予約1件までとなっております。<br>
+      ご変更・追加のご予約をご希望の場合は、お手数ですがお電話にてご連絡ください。
+    </p>
+    <button class="back-link" id="backFromAlreadyBookedBtn" style="display:block;text-align:center;width:100%;margin-top:14px;">← 戻る</button>
+  </div>
+
+  <!-- STEP1-B: 初めての方の情報入力 -->
+  <div class="card" id="screen-new-patient" style="display:none;">
+    <p class="section-title">① お客様情報の入力（初めての方）</p>
+    <label class="first">お名前</label>
+    <input type="text" id="newName" placeholder="山田 太郎">
+    <label>フリガナ</label>
+    <input type="text" id="newKana" placeholder="ヤマダ タロウ">
+    <label>お電話番号</label>
+    <input type="tel" id="newPhone" placeholder="09012345678">
+    <div class="error-banner" id="newPatientError"></div>
+    <button class="btn-primary" id="newPatientNextBtn">予約に進む</button>
+    <button class="back-link" id="backToEntryFromNewBtn">← 戻る</button>
+  </div>
+
+  <!-- STEP2: 日時選択 -->
+  <div class="card" id="screen-select" style="display:none;">
+    <p class="section-title">② ご希望の日時を選択</p>
+    <div class="week-nav">
+      <button id="weekPrevBtn">← 前の週</button>
+      <span id="weekLabel">-</span>
+      <button id="weekNextBtn">次の週 →</button>
+    </div>
+    <div id="daysContainer"><div class="loading-note">読み込み中...</div></div>
+
+    <div id="selectedSummary"></div>
+    <button class="btn-primary" id="confirmBtn" disabled>この日時で予約する</button>
+    <div class="error-banner" id="confirmError"></div>
+  </div>
+
+  <!-- STEP2.5: 内容確認 -->
+  <div class="card" id="screen-confirm" style="display:none;">
+    <p class="section-title">③ 内容のご確認</p>
+    <div id="confirmDetailBox"></div>
+    <button class="btn-primary" id="finalConfirmBtn">この内容で確定する</button>
+    <button class="back-link" id="backToSelectBtn" style="display:block;text-align:center;width:100%;margin-top:14px;">← 日時を選び直す</button>
+    <div class="error-banner" id="finalConfirmError"></div>
+  </div>
+
+  <!-- STEP3: 完了 -->
+  <div id="screen-done">
+    <div class="icon">✓</div>
+    <h2>ご予約を受け付けました</h2>
+    <p id="doneDetail"></p>
+    <p style="margin-top:20px;">当日はお時間に余裕をもってご来院ください。<br>ご変更・キャンセルはお電話にてお願いいたします。</p>
+  </div>
+
+</div>
+
+<footer style="text-align:center;padding:20px;font-size:11px;">
+  <a href="privacy.html" style="color:var(--sub);">個人情報の取り扱いについて</a>
+</footer>
+
+<script>
+/* ====== ここにFirebaseプロジェクトの設定値を貼り付けてください(ステータスボードと同じ値) ====== */
+const firebaseConfig = {
+  apiKey: "AIzaSyACFv4FmyYcIrbWkmnNeMt_gnBbvqqrNm8",
+  authDomain: "hagiwaradentalclinic-220fc.firebaseapp.com",
+  projectId: "hagiwaradentalclinic-220fc",
+  storageBucket: "hagiwaradentalclinic-220fc.firebasestorage.app",
+  messagingSenderId: "70012966149",
+  appId: "1:70012966149:web:7147e539d67bb8f0cad36c",
+  measurementId: "G-08R4YLB1C0"
+};
+const CLINIC_ID = "clinic_default";
+const CLINIC_NAME = "萩原歯科";
+/* ====== ここにApp Check用のreCAPTCHA v3サイトキーを貼り付けてください(3ファイル共通) ====== */
+const APP_CHECK_SITE_KEY = "YOUR_RECAPTCHA_V3_SITE_KEY";
+/* =================================================================== */
+
+let db = null;
+let firebaseReady = false;
+try {
+  if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY") {
+    firebase.initializeApp(firebaseConfig);
+    if (APP_CHECK_SITE_KEY && APP_CHECK_SITE_KEY !== "YOUR_RECAPTCHA_V3_SITE_KEY") {
+      const appCheck = firebase.appCheck();
+      appCheck.activate(APP_CHECK_SITE_KEY, true);
+    }
+    db = firebase.firestore();
+    firebaseReady = true;
+  } else {
+    document.getElementById('configBanner').style.display = 'block';
+  }
+} catch (e) {
+  console.error(e);
+  document.getElementById('configBanner').style.display = 'block';
+}
+
+const RESERVATION_HOURS = [];
+for (let h = 9; h <= 18; h += 0.5) RESERVATION_HOURS.push(h);
+const DAY_NAMES = ['月','火','水','木','金','土','日'];
+
+/* ====== 新患受付の切り替えスイッチ ======
+   false: 通院中の方の予約のみ受け付ける(今の運用)
+   true : 「通院中の方／初めての方」の選択画面を表示し、初診の方の予約も受け付ける
+   準備ができたら true に変更するだけで、新患受付を開始できます。 */
+const NEW_PATIENT_BOOKING_ENABLED = false;
+
+let verifiedPatient = null; // { chartNumber, name, nameKana, phone, email, address }
+let bookingVisitType = "再診"; // このフォーム経由の予約は「再診」または「初診」
+let weekStart = null;
+let dayConfigCache = {};
+let selectedSlot = null; // { date, hour, unit }
+let currentWeekDays = []; // 表示中の週のcfg・空き状況(ユニット自動割り当てに使用)
+let maxAdvanceDays = 30; // ネット予約で先まで取れる日数(既定30日=1ヶ月、Firestoreの設定があればそちらを優先)
+
+// ---- 起動時：ネット予約が停止中でないか確認してから画面を出し分ける ----
+async function initEntryScreen() {
+  if (firebaseReady) {
+    try {
+      const doc = await db.collection('bookingStatus').doc(CLINIC_ID).get();
+      const enabled = doc.exists ? (doc.data().enabled !== false) : true;
+      if (doc.exists && doc.data().maxAdvanceDays !== undefined && doc.data().maxAdvanceDays !== null) {
+        maxAdvanceDays = doc.data().maxAdvanceDays;
+      }
+      if (!enabled) {
+        document.getElementById('screen-paused').style.display = 'block';
+        return;
+      }
+    } catch (e) {
+      console.error(e);
+      // 確認に失敗した場合は、通常通り予約画面を表示する(フェイルオープン)
+    }
+  }
+
+  if (NEW_PATIENT_BOOKING_ENABLED) {
+    document.getElementById('screen-entry').style.display = 'block';
+    document.getElementById('backToEntryFromVerifyBtn').style.display = 'inline-block';
+    document.getElementById('headerSubtitle').textContent = '通院中の方・初めての方、どちらもご利用いただけます';
+  } else {
+    document.getElementById('screen-verify').style.display = 'block';
+  }
+
+  // QRコードから開いた場合(?chart=カルテ番号)、カルテ番号を自動入力し、選択画面は飛ばす
+  const urlParams = new URLSearchParams(window.location.search);
+  const chartFromUrl = urlParams.get('chart');
+  if (chartFromUrl) {
+    document.getElementById('screen-entry').style.display = 'none';
+    document.getElementById('screen-verify').style.display = 'block';
+    document.getElementById('chartNumberInput').value = chartFromUrl;
+    document.getElementById('phoneInput').focus();
+  }
+}
+initEntryScreen();
+
+document.getElementById('entryExistingBtn').addEventListener('click', () => {
+  document.getElementById('screen-entry').style.display = 'none';
+  document.getElementById('screen-verify').style.display = 'block';
+});
+document.getElementById('entryNewBtn').addEventListener('click', () => {
+  document.getElementById('screen-entry').style.display = 'none';
+  document.getElementById('screen-new-patient').style.display = 'block';
+});
+document.getElementById('backToEntryFromVerifyBtn').addEventListener('click', () => {
+  document.getElementById('screen-verify').style.display = 'none';
+  document.getElementById('screen-entry').style.display = 'block';
+});
+document.getElementById('backFromAlreadyBookedBtn').addEventListener('click', () => {
+  document.getElementById('screen-already-booked').style.display = 'none';
+  document.getElementById('chartNumberInput').value = '';
+  document.getElementById('phoneInput').value = '';
+  if (NEW_PATIENT_BOOKING_ENABLED) {
+    document.getElementById('screen-entry').style.display = 'block';
+  } else {
+    document.getElementById('screen-verify').style.display = 'block';
+  }
+});
+document.getElementById('backToEntryFromNewBtn').addEventListener('click', () => {
+  document.getElementById('screen-new-patient').style.display = 'none';
+  document.getElementById('screen-entry').style.display = 'block';
+});
+
+/* ---- 初めての方：情報入力 ---- */
+document.getElementById('newPatientNextBtn').addEventListener('click', () => {
+  const name = document.getElementById('newName').value.trim();
+  const kana = document.getElementById('newKana').value.trim();
+  const phone = document.getElementById('newPhone').value.trim();
+  const errEl = document.getElementById('newPatientError');
+  errEl.style.display = 'none';
+
+  if (!name || !phone) {
+    errEl.textContent = 'お名前とお電話番号を入力してください';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  verifiedPatient = {
+    chartNumber: null,
+    name: name,
+    nameKana: kana,
+    phone: phone,
+    email: null,
+    address: null
+  };
+  bookingVisitType = "初診";
+
+  document.getElementById('screen-new-patient').style.display = 'none';
+  document.getElementById('screen-select').style.display = 'block';
+  weekStart = getTodayStart();
+  loadWeek();
+});
+
+// 全角数字(０-９)を半角に変換する(スマホの数字キーボードが全角になっている場合に備える。
+// ここで揃えておかないと名簿(半角で登録)と一致せず、カルテ番号が見つからない/
+// 別記録として扱われてしまう不具合の原因になる)
+function toHalfWidthDigits(str) {
+  if (!str) return str;
+  return String(str).replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
+}
+
+function toLocalDateKey(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+function formatHourLabel(h) {
+  const hourPart = Math.floor(h);
+  const minPart = Math.round((h - hourPart) * 60);
+  return hourPart + ':' + String(minPart).padStart(2, '0');
+}
+function getTodayStart() {
+  const d = new Date();
+  d.setHours(0,0,0,0);
+  return d;
+}
+// 曜日ごとの休診の既定値(board.html側の「⚙ 予約表設定」で設定されたもの。0=日,1=月,...6=土)
+let weekdayClosedDefaults = [true, false, false, false, false, false, false];
+async function loadWeekdayDefaults() {
+  if (!firebaseReady) return;
+  try {
+    const doc = await db.collection('clinicSettings').doc('weekdayDefaults_' + CLINIC_ID).get();
+    if (doc.exists && Array.isArray(doc.data().closedWeekdays)) {
+      weekdayClosedDefaults = doc.data().closedWeekdays;
+    }
+  } catch (e) {
+    console.error('曜日既定値の読み込みに失敗しました', e);
+  }
+}
+
+function getDefaultDayConfig(dow) {
+  const closed = (dow !== undefined && dow !== null && weekdayClosedDefaults[dow]) ? true : false;
+  return { count: 3, names: ['ユニット1', 'ユニット2', 'ユニット3'], categories: [[],[],[],[]], closed, startHour: 9, endHour: 18, lunchStart: 12, lunchEnd: 14, confirmed: false };
+}
+
+// Firestoreは「配列の中に配列」を保存できないため、カテゴリは文字列(カンマ区切り)で保存されている。読み込み時に配列へ戻す
+function categoriesFromStorage(storedArr) {
+  return (storedArr || []).map(s => (typeof s === 'string' ? s.split(',').filter(Boolean) : (Array.isArray(s) ? s : [])));
+}
+
+function normalizeDayConfig(raw, dow) {
+  const def = getDefaultDayConfig(dow);
+  if (!raw) return def;
+  return {
+    count: raw.count ?? def.count,
+    names: raw.names || def.names,
+    categories: raw.categories ? categoriesFromStorage(raw.categories) : def.categories,
+    closed: raw.closed !== undefined ? raw.closed : def.closed,
+    startHour: (raw.startHour !== undefined && raw.startHour !== null) ? raw.startHour : def.startHour,
+    endHour: (raw.endHour !== undefined && raw.endHour !== null) ? raw.endHour : def.endHour,
+    lunchStart: (raw.lunchStart !== undefined) ? raw.lunchStart : def.lunchStart,
+    lunchEnd: (raw.lunchEnd !== undefined) ? raw.lunchEnd : def.lunchEnd,
+    confirmed: raw.confirmed === true
+  };
+}
+
+function isLunchHour(cfg, hour) {
+  if (cfg.lunchStart === null || cfg.lunchEnd === null || cfg.lunchStart === undefined || cfg.lunchEnd === undefined) return false;
+  return hour >= cfg.lunchStart && hour < cfg.lunchEnd;
+}
+
+/* ---- STEP1: 本人確認 ---- */
+document.getElementById('verifyBtn').addEventListener('click', async () => {
+  const chartNumber = toHalfWidthDigits(document.getElementById('chartNumberInput').value.trim());
+  const phone = document.getElementById('phoneInput').value.trim();
+  const errEl = document.getElementById('verifyError');
+  errEl.style.display = 'none';
+
+  if (!chartNumber || !phone) {
+    errEl.textContent = 'カルテ番号とお電話番号を入力してください';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (!firebaseReady) {
+    errEl.textContent = 'システム設定が未完了です。お電話でご予約ください。';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  const btn = document.getElementById('verifyBtn');
+  btn.disabled = true;
+  btn.textContent = '確認中...';
+
+  try {
+    const doc = await db.collection('patientRoster').doc(chartNumber).get();
+    if (!doc.exists) {
+      errEl.textContent = 'カルテ番号が見つかりません。お手数ですがお電話でご確認ください。';
+      errEl.style.display = 'block';
+      return;
+    }
+    const data = doc.data();
+    const normalizedStored = (data.phone || '').replace(/[^0-9]/g, '');
+    const normalizedInput = phone.replace(/[^0-9]/g, '');
+    if (!normalizedStored || normalizedStored !== normalizedInput) {
+      errEl.textContent = 'お電話番号が一致しません。ご登録のお電話番号をご確認ください。';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    verifiedPatient = {
+      chartNumber: chartNumber,
+      name: data.name || '',
+      nameKana: data.nameKana || '',
+      phone: data.phone || '',
+      email: data.email || null,
+      address: data.address || null,
+      nextApptCategory: data.nextApptCategory || null,
+      techEarliestDate: data.techEarliestDate || null
+    };
+    bookingVisitType = "再診";
+
+    // 既にネットから取った予約が(未来の日時で)残っていないかチェック
+    if (data.nextAppointmentDate) {
+      const apptDateTime = new Date(data.nextAppointmentDate + 'T00:00:00');
+      if (data.nextAppointmentHour !== undefined && data.nextAppointmentHour !== null) {
+        const h = Math.floor(data.nextAppointmentHour);
+        const m = Math.round((data.nextAppointmentHour - h) * 60);
+        apptDateTime.setHours(h, m, 0, 0);
+      }
+      if (apptDateTime.getTime() > Date.now()) {
+        const d = apptDateTime;
+        const dowNames = ['日','月','火','水','木','金','土'];
+        let label = `${d.getMonth()+1}月${d.getDate()}日(${dowNames[d.getDay()]})`;
+        if (data.nextAppointmentHour !== undefined && data.nextAppointmentHour !== null) {
+          label += ' ' + formatHourLabel(data.nextAppointmentHour) + '〜';
+        }
+        document.getElementById('alreadyBookedDetail').textContent = label;
+        document.getElementById('screen-verify').style.display = 'none';
+        document.getElementById('screen-already-booked').style.display = 'block';
+        return;
+      }
+    }
+
+    document.getElementById('screen-verify').style.display = 'none';
+    document.getElementById('screen-select').style.display = 'block';
+    weekStart = getTodayStart();
+    loadWeek();
+  } catch (e) {
+    console.error(e);
+    errEl.textContent = '確認に失敗しました。通信環境をご確認のうえ、もう一度お試しください。';
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '確認して予約に進む';
+  }
+});
+
+/* ---- STEP2: 週表示・空き状況 ---- */
+document.getElementById('weekPrevBtn').addEventListener('click', () => {
+  weekStart.setDate(weekStart.getDate() - 7);
+  loadWeek();
+});
+document.getElementById('weekNextBtn').addEventListener('click', () => {
+  weekStart.setDate(weekStart.getDate() + 7);
+  loadWeek();
+});
+
+function getMaxBookableDate() {
+  const d = getTodayStart();
+  d.setDate(d.getDate() + maxAdvanceDays);
+  return d;
+}
+
+let weekdayDefaultsLoaded = false;
+async function loadWeek() {
+  if (!weekdayDefaultsLoaded) {
+    weekdayDefaultsLoaded = true;
+    await loadWeekdayDefaults();
+  }
+  const container = document.getElementById('daysContainer');
+  container.innerHTML = '<div class="loading-note">読み込み中...</div>';
+  selectedSlot = null;
+  updateSelectedSummary();
+
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate() + 6);
+  document.getElementById('weekLabel').textContent =
+    `${weekStart.getMonth()+1}/${weekStart.getDate()} 〜 ${weekEnd.getMonth()+1}/${weekEnd.getDate()}`;
+
+  // 今日より前には戻れない、予約可能期間より先にも進めないようにする
+  const todayKey = toLocalDateKey(getTodayStart());
+  const maxDate = getMaxBookableDate();
+  const maxKey = toLocalDateKey(maxDate);
+  document.getElementById('weekPrevBtn').disabled = (toLocalDateKey(weekStart) <= todayKey);
+  document.getElementById('weekNextBtn').disabled = (toLocalDateKey(weekStart) >= maxKey);
+
+  try {
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(weekStart);
+      d.setDate(d.getDate() + i);
+      const key = toLocalDateKey(d);
+      if (key < todayKey) continue; // 今日より前の日は表示しない
+      if (key > maxKey) continue; // 予約可能期間より先の日は表示しない
+
+      const [dayConfigDoc, availDoc] = await Promise.all([
+        db.collection('reservationDayConfig').doc(CLINIC_ID + '_' + key).get(),
+        db.collection('availability').doc(CLINIC_ID + '_' + key).get()
+      ]);
+      const cfg = normalizeDayConfig(dayConfigDoc.exists ? dayConfigDoc.data() : null, d.getDay());
+      const occupied = availDoc.exists ? (availDoc.data().slots || {}) : {};
+      days.push({ date: d, key, cfg, occupied });
+    }
+    renderDays(days, todayKey);
+    currentWeekDays = days;
+  } catch (e) {
+    console.error(e);
+    container.innerHTML = '<div class="loading-note">読み込みに失敗しました。時間をおいて再度お試しください。</div>';
+  }
+}
+
+function renderDays(days, todayKey) {
+  const container = document.getElementById('daysContainer');
+  if (days.length === 0) {
+    container.innerHTML = '<div class="loading-note">表示できる日がありません</div>';
+    return;
+  }
+  container.innerHTML = '';
+
+  days.forEach(({ date, key, cfg, occupied }) => {
+    const block = document.createElement('div');
+    block.className = 'day-block';
+    const isToday = key === todayKey;
+    const dowIdx = date.getDay() === 0 ? 6 : date.getDay() - 1;
+    const dayName = DAY_NAMES[dowIdx];
+
+    if (cfg.closed || cfg.count === 0) {
+      block.innerHTML = `
+        <div class="day-block-head${isToday ? ' today' : ''}">${date.getMonth()+1}/${date.getDate()}(${dayName})</div>
+        <div class="day-closed">休診日</div>
+      `;
+      container.appendChild(block);
+      return;
+    }
+
+    if (!cfg.confirmed) {
+      block.innerHTML = `
+        <div class="day-block-head${isToday ? ' today' : ''}">${date.getMonth()+1}/${date.getDate()}(${dayName})</div>
+        <div class="day-closed">現在調整中のため、まだご予約いただけません</div>
+      `;
+      container.appendChild(block);
+      return;
+    }
+
+    // 技工物の準備等の都合で、指定日より前は予約できないよう制限されている場合
+    const earliestDate = (verifiedPatient && verifiedPatient.techEarliestDate) || null;
+    if (earliestDate && key < earliestDate) {
+      const ed = new Date(earliestDate + 'T00:00:00');
+      block.innerHTML = `
+        <div class="day-block-head${isToday ? ' today' : ''}">${date.getMonth()+1}/${date.getDate()}(${dayName})</div>
+        <div class="day-closed">準備の都合上、${ed.getMonth()+1}月${ed.getDate()}日以降でご予約ください</div>
+      `;
+      container.appendChild(block);
+      return;
+    }
+
+    let slotsHtml = '';
+    const patientCategory = (verifiedPatient && verifiedPatient.nextApptCategory) || null;
+    RESERVATION_HOURS.filter(hour => hour >= cfg.startHour && hour < cfg.endHour && !isLunchHour(cfg, hour)).forEach(hour => {
+      // その時間帯に、空いているユニットが1つでもあるかどうかだけを見る(患者にはユニットを意識させない)
+      // カテゴリが指定されている患者は、そのカテゴリの列だけを対象に空きを判定する
+      const hasAvailableUnit = Array.from({length: cfg.count}, (_, i) => i + 1)
+        .filter(u => !patientCategory || (cfg.categories && Array.isArray(cfg.categories[u-1]) && cfg.categories[u-1].includes(patientCategory)))
+        .some(u => !occupied[`${hour}_${u}`]);
+      const taken = !hasAvailableUnit;
+      slotsHtml += `
+        <div class="slot-pill${taken ? ' taken' : ''}" data-date="${key}" data-hour="${hour}">
+          ${formatHourLabel(hour)}
+        </div>
+      `;
+    });
+
+    const lunchLabel = (cfg.lunchStart !== null && cfg.lunchEnd !== null)
+      ? `(昼休み ${formatHourLabel(cfg.lunchStart)}〜${formatHourLabel(cfg.lunchEnd)})`
+      : '';
+    block.innerHTML = `
+      <div class="day-block-head${isToday ? ' today' : ''}">${date.getMonth()+1}/${date.getDate()}(${dayName}) <span style="font-size:11px;font-weight:400;">${formatHourLabel(cfg.startHour)}〜${formatHourLabel(cfg.endHour)} ${lunchLabel}</span></div>
+      <div class="day-block-body">${slotsHtml}</div>
+    `;
+    container.appendChild(block);
+  });
+
+  container.querySelectorAll('.slot-pill:not(.taken)').forEach(el => {
+    el.addEventListener('click', () => {
+      const date = el.dataset.date;
+      const hour = parseFloat(el.dataset.hour);
+      const dayData = currentWeekDays.find(d => d.key === date);
+      const unit = pickAvailableUnit(dayData, hour);
+      if (!unit) {
+        alert('申し訳ございません、ちょうどその時間が埋まってしまいました。もう一度お選びください。');
+        loadWeek();
+        return;
+      }
+      container.querySelectorAll('.slot-pill.selected').forEach(p => p.classList.remove('selected'));
+      el.classList.add('selected');
+      selectedSlot = { date, hour, unit };
+      updateSelectedSummary();
+    });
+  });
+}
+
+// その日・その時間帯で、空いているユニットのうち最初の1つを自動選択する
+// (患者に「次回の予約カテゴリ」が設定されている場合、そのカテゴリの列だけを対象にする。無ければどの列でも良い)
+function pickAvailableUnit(dayData, hour) {
+  if (!dayData) return null;
+  const patientCategory = (verifiedPatient && verifiedPatient.nextApptCategory) || null;
+  const categories = dayData.cfg.categories || [];
+  for (let u = 1; u <= dayData.cfg.count; u++) {
+    const unitCategories = Array.isArray(categories[u-1]) ? categories[u-1] : [];
+    if (patientCategory) {
+      // 患者にカテゴリが指定されている場合、そのカテゴリの列だけを対象にする
+      if (!unitCategories.includes(patientCategory)) continue;
+    }
+    if (!dayData.occupied[`${hour}_${u}`]) return String(u);
+  }
+  return null;
+}
+
+function updateSelectedSummary() {
+  const el = document.getElementById('selectedSummary');
+  const btn = document.getElementById('confirmBtn');
+  if (!selectedSlot) {
+    el.style.display = 'none';
+    btn.disabled = true;
+    return;
+  }
+  const d = new Date(selectedSlot.date + 'T00:00:00');
+  el.textContent = `選択中：${d.getMonth()+1}/${d.getDate()} ${formatHourLabel(selectedSlot.hour)}〜`;
+  el.style.display = 'block';
+  btn.disabled = false;
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+/* ---- STEP2→3: 予約確定 ---- */
+document.getElementById('confirmBtn').addEventListener('click', () => {
+  if (!selectedSlot || !verifiedPatient) return;
+
+  const d = new Date(selectedSlot.date + 'T00:00:00');
+  const dowNames = ['日','月','火','水','木','金','土'];
+  const dateLabel = `${d.getMonth()+1}月${d.getDate()}日(${dowNames[d.getDay()]}) ${formatHourLabel(selectedSlot.hour)}〜`;
+
+  document.getElementById('confirmDetailBox').innerHTML = `
+    <div class="confirm-row"><span class="confirm-label">お名前</span><span class="confirm-value">${escapeHtml(verifiedPatient.name || '')}</span></div>
+    <div class="confirm-row"><span class="confirm-label">ご予約日時</span><span class="confirm-value">${escapeHtml(dateLabel)}</span></div>
+    <div class="confirm-notice">
+      ⚠ ご予約の<strong>変更・キャンセルはお電話</strong>にてお願いいたします。当日の無断キャンセルはご遠慮ください。
+    </div>
+  `;
+
+  document.getElementById('finalConfirmError').style.display = 'none';
+  document.getElementById('screen-select').style.display = 'none';
+  document.getElementById('screen-confirm').style.display = 'block';
+});
+
+document.getElementById('backToSelectBtn').addEventListener('click', () => {
+  document.getElementById('screen-confirm').style.display = 'none';
+  document.getElementById('screen-select').style.display = 'block';
+});
+
+document.getElementById('finalConfirmBtn').addEventListener('click', async () => {
+  if (!selectedSlot || !verifiedPatient) return;
+  const errEl = document.getElementById('finalConfirmError');
+  errEl.style.display = 'none';
+
+  const btn = document.getElementById('finalConfirmBtn');
+  btn.disabled = true;
+  btn.textContent = '予約処理中...';
+
+  try {
+    // ダブルブッキング防止のため、直前にもう一度空き状況を確認
+    const availDoc = await db.collection('availability').doc(CLINIC_ID + '_' + selectedSlot.date).get();
+    const occupied = availDoc.exists ? (availDoc.data().slots || {}) : {};
+    if (occupied[`${selectedSlot.hour}_${selectedSlot.unit}`]) {
+      errEl.textContent = 'その枠は直前に埋まってしまいました。お手数ですが別の枠をお選びください。';
+      errEl.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'この内容で確定する';
+      document.getElementById('screen-confirm').style.display = 'none';
+      document.getElementById('screen-select').style.display = 'block';
+      loadWeek();
+      return;
+    }
+
+    const now = new Date();
+    const createdAtDate = new Date(selectedSlot.date + 'T00:00:00');
+    createdAtDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+
+    await db.collection('patients').add({
+      clinicId: CLINIC_ID,
+      clinicName: CLINIC_NAME,
+      chartNumber: verifiedPatient.chartNumber,
+      name: verifiedPatient.name,
+      nameKana: verifiedPatient.nameKana,
+      phone: verifiedPatient.phone,
+      email: verifiedPatient.email,
+      address: verifiedPatient.address,
+      visitType: bookingVisitType,
+      status: "問診済み",
+      appointmentHour: selectedSlot.hour,
+      unit: selectedSlot.unit,
+      reservationType: null,
+      nextApptCategory: verifiedPatient.nextApptCategory || null,
+      needsTechnicianOrder: false,
+      bookedByPatient: true,
+      staffConfirmed: false,
+      createdAt: createdAtDate,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    const slotKey = `${selectedSlot.hour}_${selectedSlot.unit}`;
+    await db.collection('availability').doc(CLINIC_ID + '_' + selectedSlot.date).set({
+      clinicId: CLINIC_ID,
+      date: selectedSlot.date,
+      ['slots.' + slotKey]: true,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+
+    // 名簿側にも「次回予約日時」を記録(ネット予約1件までの制限チェックに使用)
+    if (verifiedPatient.chartNumber) {
+      await db.collection('patientRoster').doc(verifiedPatient.chartNumber).update({
+        nextAppointmentDate: selectedSlot.date,
+        nextAppointmentHour: selectedSlot.hour,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+
+    const d = new Date(selectedSlot.date + 'T00:00:00');
+    document.getElementById('doneDetail').textContent =
+      `${d.getMonth()+1}月${d.getDate()}日 ${formatHourLabel(selectedSlot.hour)}〜 でご予約を承りました。`;
+    document.getElementById('screen-confirm').style.display = 'none';
+    document.getElementById('screen-done').style.display = 'block';
+  } catch (e) {
+    console.error(e);
+    errEl.textContent = '予約の登録に失敗しました。時間をおいて再度お試しください。';
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'この内容で確定する';
+  }
+});
+</script>
+
+</body>
+</html>

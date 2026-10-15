@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>問診票 | 受付</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<style>
+  :root{
+    --navy:#0f2942;
+    --navy-2:#16385a;
+    --teal:#0d7377;
+    --cyan:#14b8c4;
+    --cyan-light:#e6fbfc;
+    --bg:#f4f7f9;
+    --card:#ffffff;
+    --text:#1c2b36;
+    --sub:#5a7182;
+    --border:#e1e8ec;
+    --danger:#d64545;
+    --ok:#1f9d63;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN",Meiryo,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    -webkit-tap-highlight-color:transparent;
+  }
+  header{
+    background:linear-gradient(135deg,var(--navy) 0%,var(--navy-2) 100%);
+    color:#fff;
+    padding:22px 28px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  header h1{
+    font-size:20px;
+    margin:0;
+    font-weight:700;
+    letter-spacing:.02em;
+  }
+  header .clinic-badge{
+    background:rgba(255,255,255,.12);
+    border:1px solid rgba(255,255,255,.25);
+    padding:6px 14px;
+    border-radius:20px;
+    font-size:13px;
+  }
+  #screen-list{
+    max-width:640px;
+    margin:0 auto;
+    padding:40px 20px 80px;
+  }
+  .step-progress{
+    display:flex;
+    gap:6px;
+    margin-bottom:28px;
+  }
+  .step-progress .dot{
+    flex:1;
+    height:4px;
+    border-radius:2px;
+    background:var(--border);
+  }
+  .step-progress .dot.active{background:var(--cyan);}
+  .step-progress .dot.done{background:var(--teal);}
+
+  .card{
+    background:var(--card);
+    border-radius:16px;
+    padding:28px 24px;
+    box-shadow:0 2px 12px rgba(15,41,66,.06);
+    margin-bottom:20px;
+  }
+  .section-title{
+    font-size:15px;
+    font-weight:700;
+    color:var(--teal);
+    margin:0 0 18px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .section-title::before{
+    content:"";
+    width:4px;
+    height:16px;
+    background:var(--cyan);
+    border-radius:2px;
+    display:inline-block;
+  }
+  label{
+    display:block;
+    font-size:14px;
+    font-weight:600;
+    color:var(--text);
+    margin:16px 0 6px;
+  }
+  label.first{margin-top:0;}
+  .hint{
+    font-size:12px;
+    color:var(--sub);
+    font-weight:400;
+    margin-left:4px;
+  }
+  input[type=text], input[type=date], input[type=tel], textarea, select{
+    width:100%;
+    padding:13px 14px;
+    border:1.5px solid var(--border);
+    border-radius:10px;
+    font-size:16px;
+    font-family:inherit;
+    background:#fbfcfd;
+    color:var(--text);
+  }
+  input:focus, textarea:focus, select:focus{
+    outline:none;
+    border-color:var(--cyan);
+    background:#fff;
+  }
+  textarea{min-height:80px;resize:vertical;}
+  .radio-row, .check-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+  }
+  .pill{
+    padding:11px 18px;
+    border:1.5px solid var(--border);
+    border-radius:24px;
+    font-size:14px;
+    background:#fbfcfd;
+    cursor:pointer;
+    user-select:none;
+    transition:.12s;
+  }
+  .pill.selected{
+    background:var(--cyan);
+    border-color:var(--cyan);
+    color:#fff;
+    font-weight:700;
+  }
+  .pill.selected.warn{
+    background:var(--danger);
+    border-color:var(--danger);
+  }
+  #emailDomainRow{
+    margin-top:8px;
+  }
+  #emailDomainRow .pill{
+    padding:8px 13px;
+    font-size:12px;
+  }
+  .grid2{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
+  }
+  .btn-row{
+    display:flex;
+    gap:12px;
+    margin-top:24px;
+  }
+  button{
+    font-family:inherit;
+    font-size:16px;
+    font-weight:700;
+    border:none;
+    border-radius:12px;
+    padding:16px;
+    cursor:pointer;
+    flex:1;
+  }
+  .btn-primary{
+    background:var(--teal);
+    color:#fff;
+  }
+  .btn-primary:active{background:var(--navy);}
+  .btn-secondary{
+    background:#fff;
+    color:var(--sub);
+    border:1.5px solid var(--border);
+  }
+  .btn-primary:disabled{
+    background:#b8c4cc;
+    cursor:not-allowed;
+  }
+  #screen-done{
+    display:none;
+    text-align:center;
+    padding:80px 20px;
+  }
+  #screen-done .icon{
+    width:76px;height:76px;
+    border-radius:50%;
+    background:var(--ok);
+    color:#fff;
+    font-size:38px;
+    display:flex;align-items:center;justify-content:center;
+    margin:0 auto 20px;
+  }
+  #screen-done h2{font-size:22px;margin:0 0 8px;}
+  #screen-done p{color:var(--sub);font-size:15px;}
+  #screen-done button{
+    margin-top:28px;
+    max-width:260px;
+    background:var(--teal);color:#fff;
+  }
+  .error-banner{
+    background:#fdecec;
+    border:1px solid #f3c2c2;
+    color:var(--danger);
+    padding:12px 16px;
+    border-radius:10px;
+    font-size:13px;
+    margin-bottom:16px;
+    display:none;
+  }
+  .config-banner{
+    background:#fff8e1;
+    border:1px solid #f0d98c;
+    color:#7a5c00;
+    padding:14px 16px;
+    border-radius:10px;
+    font-size:13px;
+    margin:20px auto 0;
+    max-width:640px;
+  }
+  .required-mark{color:var(--danger);font-weight:700;}
+  #chartLookupStatus{
+    margin-top:8px;
+    font-size:12px;
+    padding:8px 12px;
+    border-radius:8px;
+    display:none;
+  }
+  #chartLookupStatus.found{
+    display:block;
+    background:#e9f9f0;
+    border:1px solid #b7e6c9;
+    color:var(--ok);
+  }
+  #chartLookupStatus.notfound{
+    display:block;
+    background:#fdecec;
+    border:1px solid #f3c2c2;
+    color:var(--danger);
+  }
+  #chartLookupStatus.loading{
+    display:block;
+    background:var(--bg);
+    border:1px solid var(--border);
+    color:var(--sub);
+  }
+
+  /* ---- ログイン画面 ---- */
+  #loginOverlay{
+    display:none;
+    position:fixed;inset:0;
+    background:linear-gradient(135deg,var(--navy) 0%,var(--navy-2) 100%);
+    align-items:center;justify-content:center;
+    z-index:100;
+    padding:20px;
+  }
+  #loginCard{
+    background:#fff;
+    border-radius:20px;
+    max-width:360px;
+    width:100%;
+    padding:32px 28px;
+    box-shadow:0 20px 60px rgba(0,0,0,.3);
+  }
+  #loginCard h1{
+    font-size:19px;
+    margin:0 0 6px;
+    color:var(--navy);
+    text-align:center;
+  }
+  .login-sub{
+    font-size:12px;
+    color:var(--sub);
+    text-align:center;
+    margin:0 0 22px;
+  }
+  #loginCard label{
+    display:block;
+    font-size:13px;
+    font-weight:700;
+    color:var(--sub);
+    margin:14px 0 6px;
+  }
+  #loginCard label:first-of-type{margin-top:0;}
+  #loginCard input{
+    width:100%;
+    padding:13px 14px;
+    border:1.5px solid var(--border);
+    border-radius:10px;
+    font-size:16px;
+    font-family:inherit;
+    background:#fbfcfd;
+  }
+  #loginCard input:focus{outline:none;border-color:var(--cyan);background:#fff;}
+  #loginError{
+    display:none;
+    background:#fdecec;
+    border:1px solid #f3c2c2;
+    color:var(--danger);
+    padding:10px 12px;
+    border-radius:8px;
+    font-size:12px;
+    margin-top:14px;
+  }
+  #loginBtn{
+    width:100%;
+    margin-top:20px;
+    background:var(--teal);
+    color:#fff;
+    border:none;
+    padding:15px;
+    border-radius:12px;
+    font-size:15px;
+    font-weight:700;
+    cursor:pointer;
+    font-family:inherit;
+  }
+</style>
+</head>
+<body>
+
+<div id="loginOverlay">
+  <div id="loginCard">
+    <h1>問診票入力</h1>
+    <p class="login-sub">院内共通アカウントでログインしてください</p>
+    <label>ID(メールアドレス)</label>
+    <input type="text" id="loginEmail" autocomplete="username" placeholder="clinic@example.com">
+    <label>パスワード</label>
+    <input type="password" id="loginPassword" autocomplete="current-password">
+    <div id="loginError"></div>
+    <button id="loginBtn">ログイン</button>
+  </div>
+</div>
+
+<div id="appMain" style="display:none;">
+<header>
+  <h1>問診票入力</h1>
+  <div class="clinic-badge" id="clinicBadge">クリニック未設定</div>
+</header>
+
+<div id="screen-list">
+
+  <div class="error-banner" id="errorBanner"></div>
+
+  <div class="step-progress">
+    <div class="dot active" data-step="1"></div>
+    <div class="dot" data-step="2"></div>
+    <div class="dot" data-step="3"></div>
+  </div>
+
+  <!-- STEP 1: 基本情報 -->
+  <div class="card" id="step1">
+    <p class="section-title">基本情報</p>
+
+    <label class="first">本日のご来院は初めてですか？ <span class="required-mark">*</span></label>
+    <div class="radio-row" id="visitTypeRow">
+      <div class="pill" data-value="初診">初診</div>
+      <div class="pill" data-value="再診">再診</div>
+    </div>
+
+    <div id="chartNumberField" style="display:none;">
+      <label>カルテ番号 <span class="hint">(診察券の番号を入力すると登録情報が自動入力されます)</span></label>
+      <input type="text" id="chartNumber" placeholder="例：0001234" inputmode="numeric">
+      <div id="chartLookupStatus"></div>
+    </div>
+
+    <label>お名前 <span class="required-mark">*</span></label>
+    <input type="text" id="name" placeholder="山田 太郎">
+
+    <label>フリガナ <span class="hint">(任意)</span></label>
+    <input type="text" id="nameKana" placeholder="ヤマダ タロウ">
+
+    <div class="grid2">
+      <div>
+        <label>生年月日</label>
+        <input type="date" id="birthdate">
+      </div>
+      <div>
+        <label>性別</label>
+        <div class="radio-row" id="genderRow">
+          <div class="pill" data-value="男性">男性</div>
+          <div class="pill" data-value="女性">女性</div>
+          <div class="pill" data-value="回答しない">回答しない</div>
+        </div>
+      </div>
+    </div>
+
+    <label>電話番号</label>
+    <input type="tel" id="phone" placeholder="090-1234-5678">
+
+    <label>メールアドレス</label>
+    <input type="email" id="email" placeholder="example@mail.com">
+    <div class="radio-row" id="emailDomainRow">
+      <div class="pill" data-domain="@gmail.com">@gmail.com</div>
+      <div class="pill" data-domain="@yahoo.co.jp">@yahoo.co.jp</div>
+      <div class="pill" data-domain="@icloud.com">@icloud.com</div>
+      <div class="pill" data-domain="@docomo.ne.jp">@docomo.ne.jp</div>
+      <div class="pill" data-domain="@ezweb.ne.jp">@ezweb.ne.jp</div>
+      <div class="pill" data-domain="@softbank.ne.jp">@softbank.ne.jp</div>
+      <div class="pill" data-domain="@outlook.com">@outlook.com</div>
+    </div>
+
+    <label>ご住所</label>
+    <input type="text" id="address" placeholder="神奈川県横浜市...">
+  </div>
+
+  <!-- STEP 2: 主訴・症状 -->
+  <div class="card" id="step2" style="display:none;">
+    <p class="section-title">本日のご相談内容</p>
+
+    <label class="first">主訴・気になる点 <span class="hint">(自由記述)</span></label>
+    <textarea id="chiefComplaint" placeholder="例：前歯の並びが気になる、噛み合わせが悪い、など"></textarea>
+
+    <label>ご希望の治療</label>
+    <div class="check-row" id="treatmentWishRow"></div>
+
+    <label>症状はいつ頃からありますか</label>
+    <input type="text" id="symptomOnset" placeholder="例：半年前から、以前から気になっていた など">
+  </div>
+
+  <!-- STEP 3: 医科的情報 -->
+  <div class="card" id="step3" style="display:none;">
+    <p class="section-title">健康状態について</p>
+
+    <label class="first">現在治療中の病気はありますか</label>
+    <div class="check-row" id="medicalHistoryRow"></div>
+
+    <label>服用中のお薬</label>
+    <input type="text" id="medications" placeholder="お薬手帳をお持ちの方はご提示ください">
+
+    <label>アレルギーの詳細 <span class="hint">(薬・金属など)</span></label>
+    <input type="text" id="allergyDetail" placeholder="例：ペニシリン、金属アレルギーなど">
+
+    <label>過去に麻酔や治療で気分が悪くなったことは</label>
+    <div class="radio-row" id="anesthesiaRow">
+      <div class="pill" data-value="ある">ある</div>
+      <div class="pill" data-value="ない">ない</div>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn-secondary" id="backBtn" style="display:none;">戻る</button>
+    <button class="btn-primary" id="nextBtn">次へ</button>
+  </div>
+
+</div>
+
+<div id="screen-done">
+  <div class="icon">✓</div>
+  <h2>問診票を受け付けました</h2>
+  <p>スタッフの案内をお待ちください</p>
+  <button id="newEntryBtn">次の患者さんを入力</button>
+</div>
+
+<div class="config-banner" id="configBanner" style="display:none;">
+  ⚠ Firebase設定が未入力です。ファイル内の firebaseConfig を編集してください。
+</div>
+</div>
+
+<script>
+/* ====== ここにFirebaseプロジェクトの設定値を貼り付けてください ====== */
+const firebaseConfig = {
+  apiKey: "AIzaSyACFv4FmyYcIrbWkmnNeMt_gnBbvqqrNm8",
+  authDomain: "hagiwaradentalclinic-220fc.firebaseapp.com",
+  projectId: "hagiwaradentalclinic-220fc",
+  storageBucket: "hagiwaradentalclinic-220fc.firebasestorage.app",
+  messagingSenderId: "70012966149",
+  appId: "1:70012966149:web:7147e539d67bb8f0cad36c",
+  measurementId: "G-08R4YLB1C0"
+};
+/* ====== このクリニックの識別名(複数院展開時に使用) ====== */
+const CLINIC_ID = "clinic_default"; // 例: "miyauchi", "sasaki" など院ごとに変更
+const CLINIC_NAME = "萩原歯科"; // 表示用
+/* ====== ここにApp Check用のreCAPTCHA v3サイトキーを貼り付けてください(3ファイル共通) ====== */
+const APP_CHECK_SITE_KEY = "YOUR_RECAPTCHA_V3_SITE_KEY";
+/* =================================================================== */
+
+document.getElementById('clinicBadge').textContent = CLINIC_NAME;
+
+/* ====== よくある設定(タグ管理)で編集できる項目：ご希望の治療・現在治療中の病気 ====== */
+const DEFAULT_TREATMENT_WISH_TAGS = ['矯正相談','精密検査','むし歯治療','定期検診','その他'];
+const DEFAULT_MEDICAL_HISTORY_TAGS = ['高血圧','糖尿病','心臓疾患','アレルギー','妊娠中','特になし'];
+
+function renderIntakeOptionPills(rowId, tags) {
+  document.getElementById(rowId).innerHTML =
+    tags.map(t => `<div class="pill" data-value="${t.replace(/"/g,'&quot;')}">${t}</div>`).join('');
+}
+
+async function loadIntakeOptions() {
+  let treatmentWishTags = DEFAULT_TREATMENT_WISH_TAGS;
+  let medicalHistoryTags = DEFAULT_MEDICAL_HISTORY_TAGS;
+  if (firebaseReady) {
+    try {
+      const doc = await db.collection('clinicSettings').doc('tags_' + CLINIC_ID).get();
+      if (doc.exists) {
+        if (Array.isArray(doc.data().treatmentWishTags) && doc.data().treatmentWishTags.length) {
+          treatmentWishTags = doc.data().treatmentWishTags;
+        }
+        if (Array.isArray(doc.data().medicalHistoryTags) && doc.data().medicalHistoryTags.length) {
+          medicalHistoryTags = doc.data().medicalHistoryTags;
+        }
+      }
+    } catch (e) {
+      console.error('選択肢の読み込みに失敗しました', e);
+    }
+  }
+  renderIntakeOptionPills('treatmentWishRow', treatmentWishTags);
+  renderIntakeOptionPills('medicalHistoryRow', medicalHistoryTags);
+  setupPillGroup('treatmentWishRow', 'treatmentWish', true);
+  setupPillGroup('medicalHistoryRow', 'medicalHistory', true);
+}
+
+let db = null;
+let auth = null;
+let firebaseReady = false;
+try {
+  if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY") {
+    firebase.initializeApp(firebaseConfig);
+    if (APP_CHECK_SITE_KEY && APP_CHECK_SITE_KEY !== "YOUR_RECAPTCHA_V3_SITE_KEY") {
+      const appCheck = firebase.appCheck();
+      appCheck.activate(APP_CHECK_SITE_KEY, true);
+    }
+    db = firebase.firestore();
+    auth = firebase.auth();
+    firebaseReady = true;
+  } else {
+    document.getElementById('configBanner').style.display = 'block';
+  }
+} catch (e) {
+  console.error(e);
+  document.getElementById('configBanner').style.display = 'block';
+}
+
+// ---- ログイン処理 ----
+if (firebaseReady) {
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('appMain').style.display = 'block';
+      loadIntakeOptions();
+    } else {
+      document.getElementById('loginOverlay').style.display = 'flex';
+      document.getElementById('appMain').style.display = 'none';
+    }
+  });
+} else {
+  // Firebase未設定時はログイン画面を出さずそのまま表示
+  document.getElementById('appMain').style.display = 'block';
+  loadIntakeOptions();
+}
+
+document.getElementById('loginBtn').addEventListener('click', doLogin);
+document.getElementById('loginPassword').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') doLogin();
+});
+
+function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errEl = document.getElementById('loginError');
+  errEl.style.display = 'none';
+  if (!email || !password) {
+    errEl.textContent = 'IDとパスワードを入力してください';
+    errEl.style.display = 'block';
+    return;
+  }
+  auth.signInWithEmailAndPassword(email, password).catch(e => {
+    console.error(e);
+    errEl.textContent = 'ログインに失敗しました。IDとパスワードをご確認ください';
+    errEl.style.display = 'block';
+  });
+}
+
+// ---- state ----
+let currentStep = 1;
+const totalSteps = 3;
+const selections = {
+  gender: null,
+  visitType: null,
+  treatmentWish: new Set(),
+  medicalHistory: new Set(),
+  anesthesia: null
+};
+
+function setupPillGroup(rowId, key, multi) {
+  const row = document.getElementById(rowId);
+  row.querySelectorAll('.pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      const val = pill.dataset.value;
+      if (multi) {
+        if (selections[key].has(val)) {
+          selections[key].delete(val);
+          pill.classList.remove('selected');
+        } else {
+          selections[key].add(val);
+          pill.classList.add('selected');
+        }
+      } else {
+        row.querySelectorAll('.pill').forEach(p => p.classList.remove('selected'));
+        pill.classList.add('selected');
+        selections[key] = val;
+      }
+      if (key === 'visitType') onVisitTypeChange(val);
+    });
+  });
+}
+setupPillGroup('genderRow', 'gender', false);
+setupPillGroup('visitTypeRow', 'visitType', false);
+setupPillGroup('anesthesiaRow', 'anesthesia', false);
+
+// ---- メールアドレスのドメイン選択タブ ----
+document.querySelectorAll('#emailDomainRow .pill').forEach(pill => {
+  pill.addEventListener('click', () => {
+    const emailInput = document.getElementById('email');
+    const domain = pill.dataset.domain;
+    const current = emailInput.value;
+    const atIndex = current.indexOf('@');
+    const localPart = atIndex >= 0 ? current.slice(0, atIndex) : current;
+    emailInput.value = localPart + domain;
+    document.querySelectorAll('#emailDomainRow .pill').forEach(p => p.classList.remove('selected'));
+    pill.classList.add('selected');
+    emailInput.focus();
+  });
+});
+document.getElementById('email').addEventListener('input', () => {
+  document.querySelectorAll('#emailDomainRow .pill').forEach(p => p.classList.remove('selected'));
+});
+
+function onVisitTypeChange(val) {
+  const field = document.getElementById('chartNumberField');
+  if (val === '再診') {
+    field.style.display = 'block';
+  } else {
+    field.style.display = 'none';
+    document.getElementById('chartNumber').value = '';
+    document.getElementById('chartLookupStatus').className = '';
+    document.getElementById('chartLookupStatus').textContent = '';
+  }
+}
+
+// 全角数字(０-９)を半角に変換する(スマホの数字キーボードが全角になっている場合に備える。
+// ここで揃えておかないと、受付時のスキャン/検索(半角)と一致せず、同じ患者が
+// 「未来院」と「待ち中」の両方に別記録として出てしまう不具合の原因になる)
+function toHalfWidthDigits(str) {
+  if (!str) return str;
+  return String(str).replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
+}
+
+// ---- カルテ番号入力 → 患者名簿(patientRoster)から自動入力 ----
+let lookupTimer = null;
+document.getElementById('chartNumber').addEventListener('input', () => {
+  clearTimeout(lookupTimer);
+  const val = toHalfWidthDigits(document.getElementById('chartNumber').value.trim());
+  const statusEl = document.getElementById('chartLookupStatus');
+  if (!val) {
+    statusEl.className = '';
+    statusEl.textContent = '';
+    return;
+  }
+  statusEl.className = 'loading';
+  statusEl.textContent = '検索中...';
+  lookupTimer = setTimeout(() => lookupChartNumber(val), 500);
+});
+
+async function lookupChartNumber(chartNumber) {
+  const statusEl = document.getElementById('chartLookupStatus');
+  if (!firebaseReady) {
+    statusEl.className = 'notfound';
+    statusEl.textContent = 'Firebase未設定のため自動入力できません';
+    return;
+  }
+  try {
+    const doc = await db.collection('patientRoster').doc(chartNumber).get();
+    if (doc.exists) {
+      const r = doc.data();
+      document.getElementById('name').value = r.name || '';
+      document.getElementById('nameKana').value = r.nameKana || '';
+      document.getElementById('phone').value = r.phone || '';
+      document.getElementById('email').value = r.email || '';
+      document.getElementById('address').value = r.address || '';
+      if (r.birthdate) document.getElementById('birthdate').value = r.birthdate;
+      if (r.gender) {
+        document.querySelectorAll('#genderRow .pill').forEach(p => {
+          p.classList.toggle('selected', p.dataset.value === r.gender);
+        });
+        selections.gender = r.gender;
+      }
+      statusEl.className = 'found';
+      statusEl.textContent = `登録情報を読み込みました：${r.name || ''}`;
+    } else {
+      statusEl.className = 'notfound';
+      statusEl.textContent = '登録が見つかりません。お名前などを新規入力してください';
+    }
+  } catch (e) {
+    console.error(e);
+    statusEl.className = 'notfound';
+    statusEl.textContent = '検索に失敗しました';
+  }
+}
+
+function showStep(n) {
+  for (let i = 1; i <= totalSteps; i++) {
+    document.getElementById('step' + i).style.display = (i === n) ? 'block' : 'none';
+  }
+  document.querySelectorAll('.step-progress .dot').forEach(dot => {
+    const s = parseInt(dot.dataset.step);
+    dot.classList.toggle('active', s === n);
+    dot.classList.toggle('done', s < n);
+  });
+  document.getElementById('backBtn').style.display = (n === 1) ? 'none' : 'block';
+  document.getElementById('nextBtn').textContent = (n === totalSteps) ? '問診票を送信する' : '次へ';
+}
+
+function showError(msg) {
+  const el = document.getElementById('errorBanner');
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 3500);
+}
+
+document.getElementById('nextBtn').addEventListener('click', async () => {
+  if (currentStep === 1) {
+    if (!selections.visitType) {
+      showError('「初診」か「再診」を選択してください');
+      return;
+    }
+    const name = document.getElementById('name').value.trim();
+    if (!name) {
+      showError('お名前を入力してください');
+      return;
+    }
+  }
+  if (currentStep < totalSteps) {
+    currentStep++;
+    showStep(currentStep);
+    return;
+  }
+  // final submit
+  await submitForm();
+});
+
+document.getElementById('backBtn').addEventListener('click', () => {
+  if (currentStep > 1) {
+    currentStep--;
+    showStep(currentStep);
+  }
+});
+
+async function submitForm() {
+  const btn = document.getElementById('nextBtn');
+  btn.disabled = true;
+  btn.textContent = '送信中...';
+
+  const chartNumber = toHalfWidthDigits(document.getElementById('chartNumber').value.trim()) || null;
+
+  const record = {
+    clinicId: CLINIC_ID,
+    clinicName: CLINIC_NAME,
+    chartNumber: chartNumber, // 初診時はnull。ステータスボード側で発番後に入力
+    name: document.getElementById('name').value.trim(),
+    nameKana: document.getElementById('nameKana').value.trim(),
+    birthdate: document.getElementById('birthdate').value || null,
+    gender: selections.gender,
+    phone: document.getElementById('phone').value.trim() || null,
+    email: document.getElementById('email').value.trim() || null,
+    address: document.getElementById('address').value.trim() || null,
+    visitType: selections.visitType || "初診",
+    chiefComplaint: document.getElementById('chiefComplaint').value.trim() || null,
+    treatmentWish: Array.from(selections.treatmentWish),
+    symptomOnset: document.getElementById('symptomOnset').value.trim() || null,
+    medicalHistory: Array.from(selections.medicalHistory),
+    medications: document.getElementById('medications').value.trim() || null,
+    allergyDetail: document.getElementById('allergyDetail').value.trim() || null,
+    anesthesiaIssue: selections.anesthesia,
+    status: "問診済み",
+    createdAt: firebaseReady ? firebase.firestore.FieldValue.serverTimestamp() : new Date().toISOString(),
+    updatedAt: firebaseReady ? firebase.firestore.FieldValue.serverTimestamp() : new Date().toISOString(),
+    needsTechnicianOrder: false
+  };
+
+  try {
+    if (firebaseReady) {
+      await db.collection('patients').add(record);
+      // 再診でカルテ番号がある場合、最新情報を患者名簿(patientRoster)へ反映
+      if (chartNumber) {
+        await db.collection('patientRoster').doc(chartNumber).set({
+          chartNumber: chartNumber,
+          name: record.name,
+          nameKana: record.nameKana,
+          phone: record.phone,
+          email: record.email,
+          address: record.address,
+          birthdate: record.birthdate,
+          gender: record.gender,
+          clinicId: CLINIC_ID,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+      }
+    } else {
+      console.log('Firebase未設定のため送信をスキップしました。record:', record);
+    }
+    document.getElementById('screen-list').style.display = 'none';
+    document.getElementById('screen-done').style.display = 'block';
+  } catch (e) {
+    console.error(e);
+    showError('送信に失敗しました。通信環境をご確認ください。');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '問診票を送信する';
+  }
+}
+
+document.getElementById('newEntryBtn').addEventListener('click', () => {
+  // reset all fields
+  document.querySelectorAll('input[type=text], input[type=date], input[type=tel], input[type=email], textarea').forEach(el => el.value = '');
+  document.querySelectorAll('.pill.selected').forEach(p => p.classList.remove('selected'));
+  selections.gender = null;
+  selections.visitType = null;
+  selections.treatmentWish.clear();
+  selections.medicalHistory.clear();
+  selections.anesthesia = null;
+  document.getElementById('chartNumberField').style.display = 'none';
+  document.getElementById('chartLookupStatus').className = '';
+  document.getElementById('chartLookupStatus').textContent = '';
+  currentStep = 1;
+  showStep(1);
+  document.getElementById('screen-done').style.display = 'none';
+  document.getElementById('screen-list').style.display = 'block';
+});
+
+showStep(1);
+</script>
+
+</body>
+</html>

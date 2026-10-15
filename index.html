@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>萩原歯科 | システム一覧</title>
+<style>
+  :root{
+    --navy:#0f2942;
+    --navy-2:#16385a;
+    --teal:#0d7377;
+    --cyan:#14b8c4;
+    --cyan-light:#e6fbfc;
+    --bg:#f4f7f9;
+    --card:#ffffff;
+    --text:#1c2b36;
+    --sub:#5a7182;
+    --border:#e1e8ec;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    min-height:100vh;
+    font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN",Meiryo,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    -webkit-tap-highlight-color:transparent;
+  }
+  header{
+    background:linear-gradient(135deg,var(--navy) 0%,var(--navy-2) 100%);
+    color:#fff;
+    padding:36px 24px 30px;
+    text-align:center;
+  }
+  header h1{margin:0;font-size:20px;font-weight:700;}
+  header p{margin:6px 0 0;font-size:12px;opacity:.8;}
+
+  #app{
+    max-width:520px;
+    margin:0 auto;
+    padding:24px 18px 60px;
+  }
+  .section-label{
+    font-size:12px;
+    font-weight:700;
+    color:var(--sub);
+    margin:24px 4px 10px;
+  }
+  .section-label:first-child{margin-top:0;}
+  a.tool-card{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    background:var(--card);
+    border:1.5px solid var(--border);
+    border-radius:14px;
+    padding:18px 16px;
+    margin-bottom:12px;
+    text-decoration:none;
+    color:var(--text);
+    box-shadow:0 2px 8px rgba(15,41,66,.05);
+    transition:.12s;
+  }
+  a.tool-card:active{background:var(--cyan-light);border-color:var(--cyan);}
+  .tool-icon{
+    width:44px;height:44px;
+    flex-shrink:0;
+    border-radius:12px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:22px;
+  }
+  .tool-icon.navy{background:var(--navy);}
+  .tool-icon.teal{background:var(--teal);}
+  .tool-icon.cyan{background:var(--cyan);}
+  .tool-text .t-title{font-size:15px;font-weight:700;}
+  .tool-text .t-sub{font-size:12px;color:var(--sub);margin-top:2px;}
+  .tool-arrow{margin-left:auto;color:var(--sub);font-size:18px;flex-shrink:0;}
+
+  footer{
+    text-align:center;
+    font-size:11px;
+    color:var(--sub);
+    padding:20px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>萩原歯科</h1>
+  <p>院内システム一覧</p>
+</header>
+
+<div id="app">
+
+  <div class="section-label">👩‍⚕️ スタッフ用(ログインが必要です)</div>
+
+  <a class="tool-card" href="board.html">
+    <div class="tool-icon navy">📋</div>
+    <div class="tool-text">
+      <div class="t-title">ステータスボード</div>
+      <div class="t-sub">患者の進行状況・予約表・各種管理</div>
+    </div>
+    <div class="tool-arrow">›</div>
+  </a>
+
+  <a class="tool-card" href="intake.html">
+    <div class="tool-icon teal">📝</div>
+    <div class="tool-text">
+      <div class="t-title">問診フォーム(受付用)</div>
+      <div class="t-sub">来院された患者さまに入力いただく画面</div>
+    </div>
+    <div class="tool-arrow">›</div>
+  </a>
+
+  <div class="section-label">🦷 患者様用</div>
+
+  <a class="tool-card" href="reserve.html">
+    <div class="tool-icon cyan">📅</div>
+    <div class="tool-text">
+      <div class="t-title">WEB予約フォーム</div>
+      <div class="t-sub">通院中の方の、ネットからのご予約はこちら</div>
+    </div>
+    <div class="tool-arrow">›</div>
+  </a>
+
+</div>
+
+<footer>萩原歯科 院内システム　／　<a href="privacy.html" style="color:inherit;">個人情報の取り扱いについて</a></footer>
+
+</body>
+</html>
